@@ -17,10 +17,10 @@ const BASELINE_BOTTOM = S - MARGIN - INNER * 0.17;
 const BASELINE_HALF = INNER * 0.30;
 
 const PHASE = {
-  AIM: 'aim',
-  SHOOTING: 'shooting',
-  RESOLVING: 'resolving',
-  OVER: 'over',
+    AIM: 'aim',
+    SHOOTING: 'shooting',
+    RESOLVING: 'resolving',
+    OVER: 'over',
 };
 
 const canvas = document.getElementById('board-canvas');
@@ -34,25 +34,56 @@ const engine = Engine.create({ gravity: { x: 0, y: 0 } });
 const world = engine.world;
 
 const pockets = [
-  { x: MARGIN, y: MARGIN },
-  { x: S - MARGIN, y: MARGIN },
-  { x: MARGIN, y: S - MARGIN },
-  { x: S - MARGIN, y: S - MARGIN },
+    { x: MARGIN, y: MARGIN },
+    { x: S - MARGIN, y: MARGIN },
+    { x: MARGIN, y: S - MARGIN },
+    { x: S - MARGIN, y: S - MARGIN },
 ];
 
 const ui = {
-  p1Val: document.getElementById('p1-val'),
-  p2Val: document.getElementById('p2-val'),
-  p1Score: document.getElementById('p1-score'),
-  p2Score: document.getElementById('p2-score'),
-  status: document.getElementById('status-bar'),
-  powerBar: document.getElementById('power-bar'),
-  overlay: document.getElementById('overlay'),
-  overlayTitle: document.getElementById('overlay-title'),
-  overlayMsg: document.getElementById('overlay-msg'),
-  newBtn: document.getElementById('new-game-btn'),
-  playAgainBtn: document.getElementById('play-again-btn'),
+    p1Val: document.getElementById('p1-val'),
+    p2Val: document.getElementById('p2-val'),
+    p1Score: document.getElementById('p1-score'),
+    p2Score: document.getElementById('p2-score'),
+    status: document.getElementById('status-bar'),
+    powerBar: document.getElementById('power-bar'),
+    overlay: document.getElementById('overlay'),
+    overlayTitle: document.getElementById('overlay-title'),
+    overlayMsg: document.getElementById('overlay-msg'),
+    newBtn: document.getElementById('new-game-btn'),
+    playAgainBtn: document.getElementById('play-again-btn'),
 };
+
+const renderer = window.createCarromRenderer({
+    ctx,
+    actx,
+    ui,
+    constants: {
+        S,
+        MARGIN,
+        INNER,
+        CX,
+        CY,
+        POCKET_R,
+        PIECE_R,
+        STRIKER_R,
+        BASELINE_TOP,
+        BASELINE_BOTTOM,
+        BASELINE_HALF,
+        PHASE,
+    },
+    pockets,
+    getState: () => ({
+        pieces,
+        striker,
+        phase,
+        currentPlayer,
+        isDragging,
+        interactMode,
+        dragCurrent,
+        aimAnchor,
+    }),
+});
 
 let walls = [];
 let pieces = [];
@@ -63,11 +94,11 @@ let phase = PHASE.AIM;
 
 // Per-shot event log for deterministic turn resolution
 let turnEvents = {
-  strikerFoul: false,
-  queenPocketed: false,
-  queenBy: null,
-  ownedPocketed: 0,
-  enemyPocketed: 0,
+    strikerFoul: false,
+    queenPocketed: false,
+    queenBy: null,
+    ownedPocketed: 0,
+    enemyPocketed: 0,
 };
 
 // Input state
@@ -83,522 +114,315 @@ const STOP_FRAMES_REQUIRED = 18;
 let stopFrames = 0;
 
 function setStatus(message) {
-  ui.status.textContent = message;
+    ui.status.textContent = message;
 }
 
 function updateScores() {
-  ui.p1Val.textContent = scores[0];
-  ui.p2Val.textContent = scores[1];
+    ui.p1Val.textContent = scores[0];
+    ui.p2Val.textContent = scores[1];
 }
 
 function updatePlayerUI() {
-  ui.p1Score.classList.toggle('active', currentPlayer === 1);
-  ui.p2Score.classList.toggle('active', currentPlayer === 2);
+    ui.p1Score.classList.toggle('active', currentPlayer === 1);
+    ui.p2Score.classList.toggle('active', currentPlayer === 2);
 }
 
 function ownedColor(player) {
-  return player === 1 ? 'black' : 'white';
+    return player === 1 ? 'black' : 'white';
 }
 
 function clearWorldBodies() {
-  const all = Composite.allBodies(world);
-  for (const b of all) World.remove(world, b);
+    const all = Composite.allBodies(world);
+    for (const b of all) World.remove(world, b);
 }
 
 function createWalls() {
-  const opts = { isStatic: true, restitution: 0.92, friction: 0, frictionStatic: 0, label: 'wall' };
-  walls = [
-    Bodies.rectangle(CX, MARGIN - WALL_T / 2, INNER + 8, WALL_T, opts),
-    Bodies.rectangle(CX, S - MARGIN + WALL_T / 2, INNER + 8, WALL_T, opts),
-    Bodies.rectangle(MARGIN - WALL_T / 2, CY, WALL_T, INNER + 8, opts),
-    Bodies.rectangle(S - MARGIN + WALL_T / 2, CY, WALL_T, INNER + 8, opts),
-  ];
-  World.add(world, walls);
+    const opts = { isStatic: true, restitution: 0.92, friction: 0, frictionStatic: 0, label: 'wall' };
+    walls = [
+        Bodies.rectangle(CX, MARGIN - WALL_T / 2, INNER + 8, WALL_T, opts),
+        Bodies.rectangle(CX, S - MARGIN + WALL_T / 2, INNER + 8, WALL_T, opts),
+        Bodies.rectangle(MARGIN - WALL_T / 2, CY, WALL_T, INNER + 8, opts),
+        Bodies.rectangle(S - MARGIN + WALL_T / 2, CY, WALL_T, INNER + 8, opts),
+    ];
+    World.add(world, walls);
 }
 
 function makePiece(x, y, type) {
-  const body = Bodies.circle(x, y, PIECE_R, {
-    restitution: 0.94,
-    friction: 0.004,
-    frictionStatic: 0,
-    frictionAir: 0.018,
-    density: 0.0018,
-    label: type,
-  });
-  body.pieceType = type;
-  return body;
+    const body = Bodies.circle(x, y, PIECE_R, {
+        restitution: 0.94,
+        friction: 0.004,
+        frictionStatic: 0,
+        frictionAir: 0.018,
+        density: 0.0018,
+        label: type,
+    });
+    body.pieceType = type;
+    return body;
 }
 
 function createRack() {
-  const r1 = PIECE_R * 2.32;
-  const r2 = r1 * 2.02;
-  const list = [
-    [CX + r1 * Math.cos(0), CY + r1 * Math.sin(0), 'white'],
-    [CX + r1 * Math.cos(Math.PI / 3), CY + r1 * Math.sin(Math.PI / 3), 'black'],
-    [CX + r1 * Math.cos(2 * Math.PI / 3), CY + r1 * Math.sin(2 * Math.PI / 3), 'white'],
-    [CX + r1 * Math.cos(Math.PI), CY + r1 * Math.sin(Math.PI), 'black'],
-    [CX + r1 * Math.cos(4 * Math.PI / 3), CY + r1 * Math.sin(4 * Math.PI / 3), 'white'],
-    [CX + r1 * Math.cos(5 * Math.PI / 3), CY + r1 * Math.sin(5 * Math.PI / 3), 'black'],
+    const r1 = PIECE_R * 2.32;
+    const r2 = r1 * 2.02;
+    const list = [
+        [CX + r1 * Math.cos(0), CY + r1 * Math.sin(0), 'white'],
+        [CX + r1 * Math.cos(Math.PI / 3), CY + r1 * Math.sin(Math.PI / 3), 'black'],
+        [CX + r1 * Math.cos(2 * Math.PI / 3), CY + r1 * Math.sin(2 * Math.PI / 3), 'white'],
+        [CX + r1 * Math.cos(Math.PI), CY + r1 * Math.sin(Math.PI), 'black'],
+        [CX + r1 * Math.cos(4 * Math.PI / 3), CY + r1 * Math.sin(4 * Math.PI / 3), 'white'],
+        [CX + r1 * Math.cos(5 * Math.PI / 3), CY + r1 * Math.sin(5 * Math.PI / 3), 'black'],
 
-    [CX + r2 * Math.cos(0), CY + r2 * Math.sin(0), 'black'],
-    [CX + r2 * Math.cos(Math.PI / 6), CY + r2 * Math.sin(Math.PI / 6), 'white'],
-    [CX + r2 * Math.cos(2 * Math.PI / 6), CY + r2 * Math.sin(2 * Math.PI / 6), 'black'],
-    [CX + r2 * Math.cos(3 * Math.PI / 6), CY + r2 * Math.sin(3 * Math.PI / 6), 'white'],
-    [CX + r2 * Math.cos(4 * Math.PI / 6), CY + r2 * Math.sin(4 * Math.PI / 6), 'black'],
-    [CX + r2 * Math.cos(5 * Math.PI / 6), CY + r2 * Math.sin(5 * Math.PI / 6), 'white'],
-    [CX + r2 * Math.cos(6 * Math.PI / 6), CY + r2 * Math.sin(6 * Math.PI / 6), 'black'],
-    [CX + r2 * Math.cos(7 * Math.PI / 6), CY + r2 * Math.sin(7 * Math.PI / 6), 'white'],
-    [CX + r2 * Math.cos(8 * Math.PI / 6), CY + r2 * Math.sin(8 * Math.PI / 6), 'black'],
-    [CX + r2 * Math.cos(9 * Math.PI / 6), CY + r2 * Math.sin(9 * Math.PI / 6), 'white'],
-    [CX + r2 * Math.cos(10 * Math.PI / 6), CY + r2 * Math.sin(10 * Math.PI / 6), 'black'],
-    [CX + r2 * Math.cos(11 * Math.PI / 6), CY + r2 * Math.sin(11 * Math.PI / 6), 'white'],
+        [CX + r2 * Math.cos(0), CY + r2 * Math.sin(0), 'black'],
+        [CX + r2 * Math.cos(Math.PI / 6), CY + r2 * Math.sin(Math.PI / 6), 'white'],
+        [CX + r2 * Math.cos(2 * Math.PI / 6), CY + r2 * Math.sin(2 * Math.PI / 6), 'black'],
+        [CX + r2 * Math.cos(3 * Math.PI / 6), CY + r2 * Math.sin(3 * Math.PI / 6), 'white'],
+        [CX + r2 * Math.cos(4 * Math.PI / 6), CY + r2 * Math.sin(4 * Math.PI / 6), 'black'],
+        [CX + r2 * Math.cos(5 * Math.PI / 6), CY + r2 * Math.sin(5 * Math.PI / 6), 'white'],
+        [CX + r2 * Math.cos(6 * Math.PI / 6), CY + r2 * Math.sin(6 * Math.PI / 6), 'black'],
+        [CX + r2 * Math.cos(7 * Math.PI / 6), CY + r2 * Math.sin(7 * Math.PI / 6), 'white'],
+        [CX + r2 * Math.cos(8 * Math.PI / 6), CY + r2 * Math.sin(8 * Math.PI / 6), 'black'],
+        [CX + r2 * Math.cos(9 * Math.PI / 6), CY + r2 * Math.sin(9 * Math.PI / 6), 'white'],
+        [CX + r2 * Math.cos(10 * Math.PI / 6), CY + r2 * Math.sin(10 * Math.PI / 6), 'black'],
+        [CX + r2 * Math.cos(11 * Math.PI / 6), CY + r2 * Math.sin(11 * Math.PI / 6), 'white'],
 
-    [CX, CY, 'queen'],
-  ];
+        [CX, CY, 'queen'],
+    ];
 
-  pieces = list.map(([x, y, type]) => makePiece(x, y, type));
-  World.add(world, pieces);
+    pieces = list.map(([x, y, type]) => makePiece(x, y, type));
+    World.add(world, pieces);
 }
 
 function spawnStriker() {
-  if (striker) World.remove(world, striker);
-  const sy = currentPlayer === 1 ? BASELINE_BOTTOM : BASELINE_TOP;
-  striker = Bodies.circle(CX, sy, STRIKER_R, {
-    restitution: 0.9,
-    friction: 0.005,
-    frictionStatic: 0,
-    frictionAir: 0.025,
-    density: 0.003,
-    label: 'striker',
-  });
-  World.add(world, striker);
+    if (striker) World.remove(world, striker);
+    const sy = currentPlayer === 1 ? BASELINE_BOTTOM : BASELINE_TOP;
+    striker = Bodies.circle(CX, sy, STRIKER_R, {
+        restitution: 0.9,
+        friction: 0.005,
+        frictionStatic: 0,
+        frictionAir: 0.025,
+        density: 0.003,
+        label: 'striker',
+    });
+    World.add(world, striker);
 }
 
 function inPocket(body) {
-  const p = body.position;
-  for (const pk of pockets) {
-    const dx = p.x - pk.x;
-    const dy = p.y - pk.y;
-    if (dx * dx + dy * dy <= (POCKET_R * 1.08) ** 2) return true;
-  }
-  return false;
+    const p = body.position;
+    for (const pk of pockets) {
+        const dx = p.x - pk.x;
+        const dy = p.y - pk.y;
+        if (dx * dx + dy * dy <= (POCKET_R * 1.08) ** 2) return true;
+    }
+    return false;
 }
 
 function processPocketEvents() {
-  if (phase !== PHASE.SHOOTING) return;
+    if (phase !== PHASE.SHOOTING) return;
 
-  // Striker foul
-  if (striker && inPocket(striker)) {
-    turnEvents.strikerFoul = true;
-    World.remove(world, striker);
-    striker = null;
-  }
-
-  // Piece pockets (safe filtering)
-  const stillOnBoard = [];
-  for (const piece of pieces) {
-    if (!inPocket(piece)) {
-      stillOnBoard.push(piece);
-      continue;
+    // Striker foul
+    if (striker && inPocket(striker)) {
+        turnEvents.strikerFoul = true;
+        World.remove(world, striker);
+        striker = null;
     }
 
-    World.remove(world, piece);
-    if (piece.pieceType === 'queen') {
-      turnEvents.queenPocketed = true;
-      turnEvents.queenBy = currentPlayer;
-    } else if (piece.pieceType === ownedColor(currentPlayer)) {
-      turnEvents.ownedPocketed += 1;
-    } else {
-      turnEvents.enemyPocketed += 1;
+    // Piece pockets (safe filtering)
+    const stillOnBoard = [];
+    for (const piece of pieces) {
+        if (!inPocket(piece)) {
+            stillOnBoard.push(piece);
+            continue;
+        }
+
+        World.remove(world, piece);
+        if (piece.pieceType === 'queen') {
+            turnEvents.queenPocketed = true;
+            turnEvents.queenBy = currentPlayer;
+        } else if (piece.pieceType === ownedColor(currentPlayer)) {
+            turnEvents.ownedPocketed += 1;
+        } else {
+            turnEvents.enemyPocketed += 1;
+        }
     }
-  }
-  pieces = stillOnBoard;
+    pieces = stillOnBoard;
 }
 
 function allBodiesStopped() {
-  const all = [striker, ...pieces].filter(Boolean);
-  if (!all.length) return true;
-  for (const b of all) {
-    const speed = Math.hypot(b.velocity.x, b.velocity.y);
-    if (speed > STOP_THRESHOLD) return false;
-  }
-  return true;
+    const all = [striker, ...pieces].filter(Boolean);
+    if (!all.length) return true;
+    for (const b of all) {
+        const speed = Math.hypot(b.velocity.x, b.velocity.y);
+        if (speed > STOP_THRESHOLD) return false;
+    }
+    return true;
 }
 
 function beginShot() {
-  turnEvents = {
-    strikerFoul: false,
-    queenPocketed: false,
-    queenBy: null,
-    ownedPocketed: 0,
-    enemyPocketed: 0,
-  };
-  stopFrames = 0;
-  phase = PHASE.SHOOTING;
-  setStatus('Shot in progress...');
+    turnEvents = {
+        strikerFoul: false,
+        queenPocketed: false,
+        queenBy: null,
+        ownedPocketed: 0,
+        enemyPocketed: 0,
+    };
+    stopFrames = 0;
+    phase = PHASE.SHOOTING;
+    setStatus('Shot in progress...');
 }
 
 function resolveTurn() {
-  if (phase === PHASE.OVER) return;
+    if (phase === PHASE.OVER) return;
 
-  phase = PHASE.RESOLVING;
+    phase = PHASE.RESOLVING;
 
-  const playerIndex = currentPlayer - 1;
+    const playerIndex = currentPlayer - 1;
 
-  // Foul first
-  if (turnEvents.strikerFoul) {
-    scores[playerIndex] = Math.max(0, scores[playerIndex] - 1);
-  }
-
-  // Base scoring
-  if (turnEvents.ownedPocketed > 0) scores[playerIndex] += turnEvents.ownedPocketed;
-  if (turnEvents.enemyPocketed > 0) scores[playerIndex] = Math.max(0, scores[playerIndex] - turnEvents.enemyPocketed);
-
-  // Queen (simplified but deterministic):
-  // +3 only if current player pocketed at least one own piece in same turn and no striker foul.
-  if (turnEvents.queenPocketed) {
-    const queenCovered = turnEvents.ownedPocketed > 0 && !turnEvents.strikerFoul;
-    if (queenCovered) {
-      scores[playerIndex] += 3;
-      setStatus(`Player ${currentPlayer} covered queen (+3)`);
-    } else {
-      // Respawn queen to center when not covered
-      const queen = makePiece(CX, CY, 'queen');
-      pieces.push(queen);
-      World.add(world, queen);
-      setStatus('Queen returned to center (not covered)');
+    // Foul first
+    if (turnEvents.strikerFoul) {
+        scores[playerIndex] = Math.max(0, scores[playerIndex] - 1);
     }
-  }
 
-  updateScores();
+    // Base scoring
+    if (turnEvents.ownedPocketed > 0) scores[playerIndex] += turnEvents.ownedPocketed;
+    if (turnEvents.enemyPocketed > 0) scores[playerIndex] = Math.max(0, scores[playerIndex] - turnEvents.enemyPocketed);
 
-  // Win condition: player clears own color
-  const myColor = ownedColor(currentPlayer);
-  const ownLeft = pieces.filter(p => p.pieceType === myColor).length;
-  if (ownLeft === 0) {
-    showWinner(currentPlayer);
-    return;
-  }
+    // Queen (simplified but deterministic):
+    // +3 only if current player pocketed at least one own piece in same turn and no striker foul.
+    if (turnEvents.queenPocketed) {
+        const queenCovered = turnEvents.ownedPocketed > 0 && !turnEvents.strikerFoul;
+        if (queenCovered) {
+            scores[playerIndex] += 3;
+            setStatus(`Player ${currentPlayer} covered queen (+3)`);
+        } else {
+            // Respawn queen to center when not covered
+            const queen = makePiece(CX, CY, 'queen');
+            pieces.push(queen);
+            World.add(world, queen);
+            setStatus('Queen returned to center (not covered)');
+        }
+    }
 
-  // Turn retain logic: keep turn only if own piece pocketed and no foul
-  const keepTurn = turnEvents.ownedPocketed > 0 && !turnEvents.strikerFoul;
-  if (!keepTurn) currentPlayer = currentPlayer === 1 ? 2 : 1;
+    updateScores();
 
-  updatePlayerUI();
-  spawnStriker();
-  ui.powerBar.style.width = '0%';
-  isDragging = false;
-  interactMode = 'slide';
-  dragStart = null;
-  dragCurrent = null;
-  aimAnchor = null;
-  phase = PHASE.AIM;
+    // Win condition: player clears own color
+    const myColor = ownedColor(currentPlayer);
+    const ownLeft = pieces.filter(p => p.pieceType === myColor).length;
+    if (ownLeft === 0) {
+        showWinner(currentPlayer);
+        return;
+    }
 
-  if (keepTurn) {
-    setStatus(`Player ${currentPlayer} continues — pocketed own coin`);
-  } else {
-    setStatus(`Player ${currentPlayer}'s turn — place and shoot`);
-  }
+    // Turn retain logic: keep turn only if own piece pocketed and no foul
+    const keepTurn = turnEvents.ownedPocketed > 0 && !turnEvents.strikerFoul;
+    if (!keepTurn) currentPlayer = currentPlayer === 1 ? 2 : 1;
+
+    updatePlayerUI();
+    spawnStriker();
+    ui.powerBar.style.width = '0%';
+    isDragging = false;
+    interactMode = 'slide';
+    dragStart = null;
+    dragCurrent = null;
+    aimAnchor = null;
+    phase = PHASE.AIM;
+
+    if (keepTurn) {
+        setStatus(`Player ${currentPlayer} continues — pocketed own coin`);
+    } else {
+        setStatus(`Player ${currentPlayer}'s turn — place and shoot`);
+    }
 }
 
 function showWinner(player) {
-  phase = PHASE.OVER;
-  updateScores();
-  ui.overlayTitle.textContent = `Player ${player} Wins!`;
-  ui.overlayMsg.textContent = `Final Score — P1: ${scores[0]} | P2: ${scores[1]}`;
-  ui.overlay.classList.add('show');
-  setStatus('Game over');
+    phase = PHASE.OVER;
+    updateScores();
+    ui.overlayTitle.textContent = `Player ${player} Wins!`;
+    ui.overlayMsg.textContent = `Final Score — P1: ${scores[0]} | P2: ${scores[1]}`;
+    ui.overlay.classList.add('show');
+    setStatus('Game over');
 }
 
 function getPointerPos(e) {
-  const rect = aimCanvas.getBoundingClientRect();
-  const sx = S / rect.width;
-  const sy = S / rect.height;
-  return {
-    x: (e.clientX - rect.left) * sx,
-    y: (e.clientY - rect.top) * sy,
-  };
+    const rect = aimCanvas.getBoundingClientRect();
+    const sx = S / rect.width;
+    const sy = S / rect.height;
+    return {
+        x: (e.clientX - rect.left) * sx,
+        y: (e.clientY - rect.top) * sy,
+    };
 }
 
 function strikerDistance(pos) {
-  if (!striker) return Number.POSITIVE_INFINITY;
-  return Math.hypot(pos.x - striker.position.x, pos.y - striker.position.y);
+    if (!striker) return Number.POSITIVE_INFINITY;
+    return Math.hypot(pos.x - striker.position.x, pos.y - striker.position.y);
 }
 
 function onPointerDown(e) {
-  if (phase !== PHASE.AIM || !striker) return;
-  const pos = getPointerPos(e);
-  if (strikerDistance(pos) > STRIKER_R * 3.7) return;
-  isDragging = true;
-  interactMode = 'slide';
-  dragStart = { x: striker.position.x, y: striker.position.y };
-  dragCurrent = pos;
-  aimAnchor = null;
+    if (phase !== PHASE.AIM || !striker) return;
+    const pos = getPointerPos(e);
+    if (strikerDistance(pos) > STRIKER_R * 3.7) return;
+    isDragging = true;
+    interactMode = 'slide';
+    dragStart = { x: striker.position.x, y: striker.position.y };
+    dragCurrent = pos;
+    aimAnchor = null;
 }
 
 function onPointerMove(e) {
-  if (!isDragging || phase !== PHASE.AIM || !striker) return;
-  dragCurrent = getPointerPos(e);
+    if (!isDragging || phase !== PHASE.AIM || !striker) return;
+    dragCurrent = getPointerPos(e);
 
-  if (interactMode === 'slide') {
-    const dx = Math.abs(dragCurrent.x - dragStart.x);
-    const dy = Math.abs(dragCurrent.y - dragStart.y);
+    if (interactMode === 'slide') {
+        const dx = Math.abs(dragCurrent.x - dragStart.x);
+        const dy = Math.abs(dragCurrent.y - dragStart.y);
 
-    if (dx > 5 || dy > 5) {
-      if (dy > dx) {
-        interactMode = 'aim';
-        aimAnchor = { x: striker.position.x, y: striker.position.y };
-      } else {
-        const baselineY = currentPlayer === 1 ? BASELINE_BOTTOM : BASELINE_TOP;
-        const nx = Math.max(CX - BASELINE_HALF, Math.min(CX + BASELINE_HALF, dragCurrent.x));
-        Body.setPosition(striker, { x: nx, y: baselineY });
-        Body.setVelocity(striker, { x: 0, y: 0 });
-        dragStart = { x: nx, y: baselineY };
-      }
+        if (dx > 5 || dy > 5) {
+            if (dy > dx) {
+                interactMode = 'aim';
+                aimAnchor = { x: striker.position.x, y: striker.position.y };
+            } else {
+                const baselineY = currentPlayer === 1 ? BASELINE_BOTTOM : BASELINE_TOP;
+                const nx = Math.max(CX - BASELINE_HALF, Math.min(CX + BASELINE_HALF, dragCurrent.x));
+                Body.setPosition(striker, { x: nx, y: baselineY });
+                Body.setVelocity(striker, { x: 0, y: 0 });
+                dragStart = { x: nx, y: baselineY };
+            }
+        }
     }
-  }
 }
 
 function onPointerUp() {
-  if (!isDragging || phase !== PHASE.AIM || !striker) return;
-  isDragging = false;
+    if (!isDragging || phase !== PHASE.AIM || !striker) return;
+    isDragging = false;
 
-  if (interactMode !== 'aim' || !aimAnchor || !dragCurrent) {
+    if (interactMode !== 'aim' || !aimAnchor || !dragCurrent) {
+        ui.powerBar.style.width = '0%';
+        interactMode = 'slide';
+        aimAnchor = null;
+        return;
+    }
+
+    const dx = dragCurrent.x - aimAnchor.x;
+    const dy = dragCurrent.y - aimAnchor.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 8) {
+        ui.powerBar.style.width = '0%';
+        interactMode = 'slide';
+        aimAnchor = null;
+        return;
+    }
+
+    const maxDist = INNER * 0.30;
+    const power = Math.min(dist / maxDist, 1);
+    const speed = power * S * 0.17;
+    const nx = dx / dist;
+    const ny = dy / dist;
+
+    Body.setVelocity(striker, { x: nx * speed, y: ny * speed });
     ui.powerBar.style.width = '0%';
     interactMode = 'slide';
     aimAnchor = null;
-    return;
-  }
-
-  const dx = dragCurrent.x - aimAnchor.x;
-  const dy = dragCurrent.y - aimAnchor.y;
-  const dist = Math.hypot(dx, dy);
-
-  if (dist < 8) {
-    ui.powerBar.style.width = '0%';
-    interactMode = 'slide';
-    aimAnchor = null;
-    return;
-  }
-
-  const maxDist = INNER * 0.30;
-  const power = Math.min(dist / maxDist, 1);
-  const speed = power * S * 0.17;
-  const nx = dx / dist;
-  const ny = dy / dist;
-
-  Body.setVelocity(striker, { x: nx * speed, y: ny * speed });
-  ui.powerBar.style.width = '0%';
-  interactMode = 'slide';
-  aimAnchor = null;
-  beginShot();
-}
-
-function drawRoundRect(c, x, y, w, h, r) {
-  c.beginPath();
-  c.moveTo(x + r, y);
-  c.lineTo(x + w - r, y);
-  c.quadraticCurveTo(x + w, y, x + w, y + r);
-  c.lineTo(x + w, y + h - r);
-  c.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  c.lineTo(x + r, y + h);
-  c.quadraticCurveTo(x, y + h, x, y + h - r);
-  c.lineTo(x, y + r);
-  c.quadraticCurveTo(x, y, x + r, y);
-  c.closePath();
-}
-
-function drawBoard() {
-  const grad = ctx.createLinearGradient(0, 0, S, S);
-  grad.addColorStop(0, '#c08a3a');
-  grad.addColorStop(0.5, '#d4a85a');
-  grad.addColorStop(1, '#a06820');
-  ctx.fillStyle = grad;
-  drawRoundRect(ctx, 0, 0, S, S, 10);
-  ctx.fill();
-
-  ctx.fillStyle = '#c8a455';
-  drawRoundRect(ctx, MARGIN, MARGIN, INNER, INNER, 4);
-  ctx.fill();
-
-  ctx.strokeStyle = 'rgba(140,100,40,0.12)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= INNER; i += 18) {
-    ctx.beginPath();
-    ctx.moveTo(MARGIN + i, MARGIN);
-    ctx.lineTo(MARGIN + i, MARGIN + INNER);
-    ctx.stroke();
-  }
-
-  ctx.strokeStyle = '#7a5010';
-  ctx.lineWidth = 1.5;
-  ctx.strokeRect(MARGIN, MARGIN, INNER, INNER);
-
-  const inset = S * 0.022;
-  ctx.strokeStyle = '#8a6030';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(MARGIN + inset, MARGIN + inset, INNER - inset * 2, INNER - inset * 2);
-
-  for (const p of pockets) {
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, POCKET_R + 3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, POCKET_R, 0, Math.PI * 2);
-    ctx.fillStyle = '#100800';
-    ctx.fill();
-
-    ctx.strokeStyle = '#5a3810';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-
-  ctx.beginPath();
-  ctx.arc(CX, CY, S * 0.12, 0, Math.PI * 2);
-  ctx.strokeStyle = '#8a6030';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.arc(CX, CY, S * 0.05, 0, Math.PI * 2);
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(CX - BASELINE_HALF, BASELINE_BOTTOM);
-  ctx.lineTo(CX + BASELINE_HALF, BASELINE_BOTTOM);
-  ctx.moveTo(CX - BASELINE_HALF, BASELINE_TOP);
-  ctx.lineTo(CX + BASELINE_HALF, BASELINE_TOP);
-  ctx.strokeStyle = '#8a6030';
-  ctx.stroke();
-}
-
-function drawOnePiece(x, y, r, type) {
-  ctx.save();
-  ctx.translate(x, y);
-
-  ctx.beginPath();
-  ctx.arc(1.5, 2, r, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.3)';
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-
-  if (type === 'black') {
-    ctx.fillStyle = '#222';
-    ctx.fill();
-    ctx.strokeStyle = '#4b4b4b';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(-r * 0.25, -r * 0.25, r * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.1)';
-    ctx.fill();
-  } else if (type === 'white') {
-    ctx.fillStyle = '#efe8da';
-    ctx.fill();
-    ctx.strokeStyle = '#c1b89f';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(-r * 0.25, -r * 0.25, r * 0.3, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(255,255,255,0.55)';
-    ctx.fill();
-  } else if (type === 'queen') {
-    ctx.fillStyle = '#c02828';
-    ctx.fill();
-    ctx.strokeStyle = '#e06060';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
-    ctx.fillStyle = '#ff8f8f';
-    ctx.fill();
-  } else {
-    ctx.fillStyle = '#d4a820';
-    ctx.fill();
-    ctx.strokeStyle = '#f0cc60';
-    ctx.lineWidth = 1.4;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.35, 0, Math.PI * 2);
-    ctx.strokeStyle = '#9f7d10';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  }
-
-  ctx.restore();
-}
-
-function drawPieces() {
-  for (const p of pieces) {
-    drawOnePiece(p.position.x, p.position.y, PIECE_R, p.pieceType);
-  }
-  if (striker) {
-    drawOnePiece(striker.position.x, striker.position.y, STRIKER_R, 'striker');
-  }
-}
-
-function drawAimOverlay() {
-  actx.clearRect(0, 0, S, S);
-  if (!striker || phase !== PHASE.AIM) return;
-
-  const by = currentPlayer === 1 ? BASELINE_BOTTOM : BASELINE_TOP;
-  actx.save();
-  actx.strokeStyle = 'rgba(255,220,80,0.18)';
-  actx.lineWidth = 2;
-  actx.beginPath();
-  actx.moveTo(CX - BASELINE_HALF, by);
-  actx.lineTo(CX + BASELINE_HALF, by);
-  actx.stroke();
-  actx.restore();
-
-  if (!isDragging || interactMode !== 'aim' || !dragCurrent || !aimAnchor) return;
-
-  const dx = dragCurrent.x - aimAnchor.x;
-  const dy = dragCurrent.y - aimAnchor.y;
-  const dist = Math.hypot(dx, dy);
-  if (dist < 6) return;
-
-  const power = Math.min(dist / (INNER * 0.30), 1);
-  ui.powerBar.style.width = (power * 100).toFixed(1) + '%';
-
-  const nx = dx / dist;
-  const ny = dy / dist;
-  const sx = striker.position.x;
-  const sy = striker.position.y;
-
-  actx.save();
-  actx.strokeStyle = 'rgba(255,230,100,0.55)';
-  actx.lineWidth = 1.6;
-  actx.setLineDash([7, 6]);
-  actx.beginPath();
-  actx.moveTo(sx, sy);
-  actx.lineTo(sx + nx * INNER * 0.38, sy + ny * INNER * 0.38);
-  actx.stroke();
-
-  actx.setLineDash([]);
-  actx.strokeStyle = 'rgba(255,170,40,0.55)';
-  actx.beginPath();
-  actx.moveTo(aimAnchor.x, aimAnchor.y);
-  actx.lineTo(dragCurrent.x, dragCurrent.y);
-  actx.stroke();
-
-  actx.fillStyle = 'rgba(255,230,100,0.85)';
-  actx.beginPath();
-  actx.arc(sx + nx * STRIKER_R * 1.25, sy + ny * STRIKER_R * 1.25, 4.4, 0, Math.PI * 2);
-  actx.fill();
-  actx.restore();
-}
-
-function render() {
-  ctx.clearRect(0, 0, S, S);
-  drawBoard();
-  drawPieces();
-  drawAimOverlay();
+    beginShot();
 }
 
 let lastTs = 0;
@@ -606,90 +430,90 @@ let accumulator = 0;
 const FIXED_DT = 1000 / 120;
 
 function loop(ts) {
-  if (!lastTs) lastTs = ts;
-  const frame = Math.min(32, ts - lastTs);
-  lastTs = ts;
-  accumulator += frame;
+    if (!lastTs) lastTs = ts;
+    const frame = Math.min(32, ts - lastTs);
+    lastTs = ts;
+    accumulator += frame;
 
-  while (accumulator >= FIXED_DT) {
-    Engine.update(engine, FIXED_DT);
+    while (accumulator >= FIXED_DT) {
+        Engine.update(engine, FIXED_DT);
 
-    if (phase === PHASE.SHOOTING) {
-      processPocketEvents();
+        if (phase === PHASE.SHOOTING) {
+            processPocketEvents();
 
-      if (allBodiesStopped()) {
-        stopFrames += 1;
-        if (stopFrames >= STOP_FRAMES_REQUIRED) {
-          resolveTurn();
+            if (allBodiesStopped()) {
+                stopFrames += 1;
+                if (stopFrames >= STOP_FRAMES_REQUIRED) {
+                    resolveTurn();
+                }
+            } else {
+                stopFrames = 0;
+            }
         }
-      } else {
-        stopFrames = 0;
-      }
+
+        accumulator -= FIXED_DT;
     }
 
-    accumulator -= FIXED_DT;
-  }
-
-  render();
-  requestAnimationFrame(loop);
+    renderer.render();
+    requestAnimationFrame(loop);
 }
 
 function resetGame() {
-  ui.overlay.classList.remove('show');
-  clearWorldBodies();
-  createWalls();
+    ui.overlay.classList.remove('show');
+    clearWorldBodies();
+    createWalls();
 
-  pieces = [];
-  striker = null;
-  currentPlayer = 1;
-  scores = [0, 0];
-  phase = PHASE.AIM;
+    pieces = [];
+    striker = null;
+    currentPlayer = 1;
+    scores = [0, 0];
+    phase = PHASE.AIM;
 
-  isDragging = false;
-  interactMode = 'slide';
-  dragStart = null;
-  dragCurrent = null;
-  aimAnchor = null;
-  stopFrames = 0;
-  ui.powerBar.style.width = '0%';
+    isDragging = false;
+    interactMode = 'slide';
+    dragStart = null;
+    dragCurrent = null;
+    aimAnchor = null;
+    stopFrames = 0;
+    ui.powerBar.style.width = '0%';
 
-  turnEvents = {
-    strikerFoul: false,
-    queenPocketed: false,
-    queenBy: null,
-    ownedPocketed: 0,
-    enemyPocketed: 0,
-  };
+    turnEvents = {
+        strikerFoul: false,
+        queenPocketed: false,
+        queenBy: null,
+        ownedPocketed: 0,
+        enemyPocketed: 0,
+    };
 
-  createRack();
-  spawnStriker();
-  updateScores();
-  updatePlayerUI();
-  setStatus('Player 1 — drag horizontally to place, drag to aim and release to shoot');
+    createRack();
+    spawnStriker();
+    updateScores();
+    updatePlayerUI();
+    setStatus('Player 1 — drag horizontally to place, drag to aim and release to shoot');
 }
 
 // Bind pointer handlers
 aimCanvas.addEventListener('pointerdown', e => {
-  e.preventDefault();
-  aimCanvas.setPointerCapture(e.pointerId);
-  onPointerDown(e);
+    e.preventDefault();
+    aimCanvas.setPointerCapture(e.pointerId);
+    onPointerDown(e);
 });
 
 aimCanvas.addEventListener('pointermove', e => {
-  e.preventDefault();
-  onPointerMove(e);
+    e.preventDefault();
+    onPointerMove(e);
 });
 
 aimCanvas.addEventListener('pointerup', e => {
-  e.preventDefault();
-  try { aimCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
-  onPointerUp();
+    e.preventDefault();
+    try { aimCanvas.releasePointerCapture(e.pointerId); } catch (_) { }
+    onPointerUp();
 });
 
 aimCanvas.addEventListener('pointercancel', () => {
-  isDragging = false;
-  ui.powerBar.style.width = '0%';
-  drawAimOverlay();
+    isDragging = false;
+    ui.powerBar.style.width = '0%';
+    renderer.drawAimOverlay();
 });
 
 ui.newBtn.addEventListener('click', resetGame);

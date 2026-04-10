@@ -1,49 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Carrom Pool</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="styles.css"/>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Carrom Pool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=DM+Sans:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-  <h1>Carrom Pool</h1>
+    <h1>Carrom Pool</h1>
 
-  <div class="scoreboard">
-    <div class="player-score active" id="p1-score">
-      <span class="label">Player 1 (Black)</span>
-      <span class="score" id="p1-val">0</span>
+    <div class="scoreboard">
+        <div class="player-score active" id="p1-score">
+            <span class="label">Player 1 (Black)</span>
+            <span class="score" id="p1-val">0</span>
+        </div>
+        <div class="vs-divider">vs</div>
+        <div class="player-score" id="p2-score">
+            <span class="label">Player 2 (White)</span>
+            <span class="score" id="p2-val">0</span>
+        </div>
     </div>
-    <div class="vs-divider">vs</div>
-    <div class="player-score" id="p2-score">
-      <span class="label">Player 2 (White)</span>
-      <span class="score" id="p2-val">0</span>
+
+    <div id="board-wrap">
+        <canvas id="board-canvas"></canvas>
+        <canvas id="aim-canvas"></canvas>
     </div>
-  </div>
 
-  <div id="board-wrap">
-    <canvas id="board-canvas"></canvas>
-    <canvas id="aim-canvas"></canvas>
-  </div>
+    <div id="status-bar">Player 1 — drag horizontally to place, drag to aim and release to shoot</div>
 
-  <div id="status-bar">Player 1 — drag horizontally to place, drag to aim and release to shoot</div>
-
-  <div class="controls">
-    <div class="power-wrap">
-      <span>Power</span>
-      <div id="power-bar-wrap"><div id="power-bar"></div></div>
+    <div class="controls">
+        <div class="power-wrap">
+            <span>Power</span>
+            <div id="power-bar-wrap">
+                <div id="power-bar"></div>
+            </div>
+        </div>
+        <button class="btn" id="new-game-btn">New Game</button>
     </div>
-    <button class="btn" id="new-game-btn">New Game</button>
-  </div>
 
-  <div id="overlay">
-    <h2 id="overlay-title">Game Over</h2>
-    <p id="overlay-msg"></p>
-    <button class="btn" id="play-again-btn">Play Again</button>
-  </div>
+    <div id="overlay">
+        <h2 id="overlay-title">Game Over</h2>
+        <p id="overlay-msg"></p>
+        <button class="btn" id="play-again-btn">Play Again</button>
+    </div>
 
-  <script src="game.js" defer></script>
+    <script src="renderer.js" defer></script>
+    <script src="game.js" defer></script>
 </body>
+
 </html>
