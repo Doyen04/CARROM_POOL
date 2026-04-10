@@ -1,20 +1,19 @@
 const { Engine, Bodies, Body, World, Composite } = Matter;
 
 // Board geometry
-const SIZE = Math.max(420, Math.min(window.innerWidth - 36, 560));
-const S = SIZE;
-const MARGIN = S * 0.06;
-const INNER = S - MARGIN * 2;
-const CX = S / 2;
-const CY = S / 2;
-const POCKET_R = S * 0.048;
-const PIECE_R = S * 0.032;
-const STRIKER_R = S * 0.041;
-const WALL_T = 18;
+const BOARD_SIZE = Math.max(420, Math.min(window.innerWidth - 36, 560));
+const BOARD_MARGIN = BOARD_SIZE * 0.06;
+const PLAY_AREA_SIZE = BOARD_SIZE - BOARD_MARGIN * 2;
+const BOARD_CENTER_X = BOARD_SIZE / 2;
+const BOARD_CENTER_Y = BOARD_SIZE / 2;
+const POCKET_RADIUS = BOARD_SIZE * 0.048;
+const COIN_RADIUS = BOARD_SIZE * 0.032;
+const STRIKER_RADIUS = BOARD_SIZE * 0.041;
+const WALL_THICKNESS = 18;
 
-const BASELINE_TOP = MARGIN + INNER * 0.17;
-const BASELINE_BOTTOM = S - MARGIN - INNER * 0.17;
-const BASELINE_HALF = INNER * 0.30;
+const BASELINE_TOP = BOARD_MARGIN + PLAY_AREA_SIZE * 0.17;
+const BASELINE_BOTTOM = BOARD_SIZE - BOARD_MARGIN - PLAY_AREA_SIZE * 0.17;
+const BASELINE_HALF = PLAY_AREA_SIZE * 0.30;
 
 const PHASE = {
     AIM: 'aim',
@@ -25,8 +24,8 @@ const PHASE = {
 
 const canvas = document.getElementById('board-canvas');
 const aimCanvas = document.getElementById('aim-canvas');
-canvas.width = aimCanvas.width = S;
-canvas.height = aimCanvas.height = S;
+canvas.width = aimCanvas.width = BOARD_SIZE;
+canvas.height = aimCanvas.height = BOARD_SIZE;
 const ctx = canvas.getContext('2d');
 const actx = aimCanvas.getContext('2d');
 
@@ -34,10 +33,10 @@ const engine = Engine.create({ gravity: { x: 0, y: 0 } });
 const world = engine.world;
 
 const pockets = [
-    { x: MARGIN, y: MARGIN },
-    { x: S - MARGIN, y: MARGIN },
-    { x: MARGIN, y: S - MARGIN },
-    { x: S - MARGIN, y: S - MARGIN },
+    { x: BOARD_MARGIN, y: BOARD_MARGIN },
+    { x: BOARD_SIZE - BOARD_MARGIN, y: BOARD_MARGIN },
+    { x: BOARD_MARGIN, y: BOARD_SIZE - BOARD_MARGIN },
+    { x: BOARD_SIZE - BOARD_MARGIN, y: BOARD_SIZE - BOARD_MARGIN },
 ];
 
 const ui = {
@@ -59,14 +58,14 @@ const renderer = window.createCarromRenderer({
     actx,
     ui,
     constants: {
-        S,
-        MARGIN,
-        INNER,
-        CX,
-        CY,
-        POCKET_R,
-        PIECE_R,
-        STRIKER_R,
+        boardSize: BOARD_SIZE,
+        boardMargin: BOARD_MARGIN,
+        playAreaSize: PLAY_AREA_SIZE,
+        boardCenterX: BOARD_CENTER_X,
+        boardCenterY: BOARD_CENTER_Y,
+        pocketRadius: POCKET_RADIUS,
+        coinRadius: COIN_RADIUS,
+        strikerRadius: STRIKER_RADIUS,
         BASELINE_TOP,
         BASELINE_BOTTOM,
         BASELINE_HALF,
@@ -139,16 +138,16 @@ function clearWorldBodies() {
 function createWalls() {
     const opts = { isStatic: true, restitution: 0.92, friction: 0, frictionStatic: 0, label: 'wall' };
     walls = [
-        Bodies.rectangle(CX, MARGIN - WALL_T / 2, INNER + 8, WALL_T, opts),
-        Bodies.rectangle(CX, S - MARGIN + WALL_T / 2, INNER + 8, WALL_T, opts),
-        Bodies.rectangle(MARGIN - WALL_T / 2, CY, WALL_T, INNER + 8, opts),
-        Bodies.rectangle(S - MARGIN + WALL_T / 2, CY, WALL_T, INNER + 8, opts),
+        Bodies.rectangle(BOARD_CENTER_X, BOARD_MARGIN - WALL_THICKNESS / 2, PLAY_AREA_SIZE + 8, WALL_THICKNESS, opts),
+        Bodies.rectangle(BOARD_CENTER_X, BOARD_SIZE - BOARD_MARGIN + WALL_THICKNESS / 2, PLAY_AREA_SIZE + 8, WALL_THICKNESS, opts),
+        Bodies.rectangle(BOARD_MARGIN - WALL_THICKNESS / 2, BOARD_CENTER_Y, WALL_THICKNESS, PLAY_AREA_SIZE + 8, opts),
+        Bodies.rectangle(BOARD_SIZE - BOARD_MARGIN + WALL_THICKNESS / 2, BOARD_CENTER_Y, WALL_THICKNESS, PLAY_AREA_SIZE + 8, opts),
     ];
     World.add(world, walls);
 }
 
 function makePiece(x, y, type) {
-    const body = Bodies.circle(x, y, PIECE_R, {
+    const body = Bodies.circle(x, y, COIN_RADIUS, {
         restitution: 0.94,
         friction: 0.004,
         frictionStatic: 0,
@@ -161,30 +160,30 @@ function makePiece(x, y, type) {
 }
 
 function createRack() {
-    const r1 = PIECE_R * 2.32;
+    const r1 = COIN_RADIUS * 2.32;
     const r2 = r1 * 2.02;
     const list = [
-        [CX + r1 * Math.cos(0), CY + r1 * Math.sin(0), 'white'],
-        [CX + r1 * Math.cos(Math.PI / 3), CY + r1 * Math.sin(Math.PI / 3), 'black'],
-        [CX + r1 * Math.cos(2 * Math.PI / 3), CY + r1 * Math.sin(2 * Math.PI / 3), 'white'],
-        [CX + r1 * Math.cos(Math.PI), CY + r1 * Math.sin(Math.PI), 'black'],
-        [CX + r1 * Math.cos(4 * Math.PI / 3), CY + r1 * Math.sin(4 * Math.PI / 3), 'white'],
-        [CX + r1 * Math.cos(5 * Math.PI / 3), CY + r1 * Math.sin(5 * Math.PI / 3), 'black'],
+        [BOARD_CENTER_X + r1 * Math.cos(0), BOARD_CENTER_Y + r1 * Math.sin(0), 'white'],
+        [BOARD_CENTER_X + r1 * Math.cos(Math.PI / 3), BOARD_CENTER_Y + r1 * Math.sin(Math.PI / 3), 'black'],
+        [BOARD_CENTER_X + r1 * Math.cos(2 * Math.PI / 3), BOARD_CENTER_Y + r1 * Math.sin(2 * Math.PI / 3), 'white'],
+        [BOARD_CENTER_X + r1 * Math.cos(Math.PI), BOARD_CENTER_Y + r1 * Math.sin(Math.PI), 'black'],
+        [BOARD_CENTER_X + r1 * Math.cos(4 * Math.PI / 3), BOARD_CENTER_Y + r1 * Math.sin(4 * Math.PI / 3), 'white'],
+        [BOARD_CENTER_X + r1 * Math.cos(5 * Math.PI / 3), BOARD_CENTER_Y + r1 * Math.sin(5 * Math.PI / 3), 'black'],
 
-        [CX + r2 * Math.cos(0), CY + r2 * Math.sin(0), 'black'],
-        [CX + r2 * Math.cos(Math.PI / 6), CY + r2 * Math.sin(Math.PI / 6), 'white'],
-        [CX + r2 * Math.cos(2 * Math.PI / 6), CY + r2 * Math.sin(2 * Math.PI / 6), 'black'],
-        [CX + r2 * Math.cos(3 * Math.PI / 6), CY + r2 * Math.sin(3 * Math.PI / 6), 'white'],
-        [CX + r2 * Math.cos(4 * Math.PI / 6), CY + r2 * Math.sin(4 * Math.PI / 6), 'black'],
-        [CX + r2 * Math.cos(5 * Math.PI / 6), CY + r2 * Math.sin(5 * Math.PI / 6), 'white'],
-        [CX + r2 * Math.cos(6 * Math.PI / 6), CY + r2 * Math.sin(6 * Math.PI / 6), 'black'],
-        [CX + r2 * Math.cos(7 * Math.PI / 6), CY + r2 * Math.sin(7 * Math.PI / 6), 'white'],
-        [CX + r2 * Math.cos(8 * Math.PI / 6), CY + r2 * Math.sin(8 * Math.PI / 6), 'black'],
-        [CX + r2 * Math.cos(9 * Math.PI / 6), CY + r2 * Math.sin(9 * Math.PI / 6), 'white'],
-        [CX + r2 * Math.cos(10 * Math.PI / 6), CY + r2 * Math.sin(10 * Math.PI / 6), 'black'],
-        [CX + r2 * Math.cos(11 * Math.PI / 6), CY + r2 * Math.sin(11 * Math.PI / 6), 'white'],
+        [BOARD_CENTER_X + r2 * Math.cos(0), BOARD_CENTER_Y + r2 * Math.sin(0), 'black'],
+        [BOARD_CENTER_X + r2 * Math.cos(Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(Math.PI / 6), 'white'],
+        [BOARD_CENTER_X + r2 * Math.cos(2 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(2 * Math.PI / 6), 'black'],
+        [BOARD_CENTER_X + r2 * Math.cos(3 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(3 * Math.PI / 6), 'white'],
+        [BOARD_CENTER_X + r2 * Math.cos(4 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(4 * Math.PI / 6), 'black'],
+        [BOARD_CENTER_X + r2 * Math.cos(5 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(5 * Math.PI / 6), 'white'],
+        [BOARD_CENTER_X + r2 * Math.cos(6 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(6 * Math.PI / 6), 'black'],
+        [BOARD_CENTER_X + r2 * Math.cos(7 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(7 * Math.PI / 6), 'white'],
+        [BOARD_CENTER_X + r2 * Math.cos(8 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(8 * Math.PI / 6), 'black'],
+        [BOARD_CENTER_X + r2 * Math.cos(9 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(9 * Math.PI / 6), 'white'],
+        [BOARD_CENTER_X + r2 * Math.cos(10 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(10 * Math.PI / 6), 'black'],
+        [BOARD_CENTER_X + r2 * Math.cos(11 * Math.PI / 6), BOARD_CENTER_Y + r2 * Math.sin(11 * Math.PI / 6), 'white'],
 
-        [CX, CY, 'queen'],
+        [BOARD_CENTER_X, BOARD_CENTER_Y, 'queen'],
     ];
 
     pieces = list.map(([x, y, type]) => makePiece(x, y, type));
@@ -194,7 +193,7 @@ function createRack() {
 function spawnStriker() {
     if (striker) World.remove(world, striker);
     const sy = currentPlayer === 1 ? BASELINE_BOTTOM : BASELINE_TOP;
-    striker = Bodies.circle(CX, sy, STRIKER_R, {
+    striker = Bodies.circle(BOARD_CENTER_X, sy, STRIKER_RADIUS, {
         restitution: 0.9,
         friction: 0.005,
         frictionStatic: 0,
@@ -210,7 +209,7 @@ function inPocket(body) {
     for (const pk of pockets) {
         const dx = p.x - pk.x;
         const dy = p.y - pk.y;
-        if (dx * dx + dy * dy <= (POCKET_R * 1.08) ** 2) return true;
+        if (dx * dx + dy * dy <= (POCKET_RADIUS * 1.08) ** 2) return true;
     }
     return false;
 }
@@ -294,7 +293,7 @@ function resolveTurn() {
             setStatus(`Player ${currentPlayer} covered queen (+3)`);
         } else {
             // Respawn queen to center when not covered
-            const queen = makePiece(CX, CY, 'queen');
+            const queen = makePiece(BOARD_CENTER_X, BOARD_CENTER_Y, 'queen');
             pieces.push(queen);
             World.add(world, queen);
             setStatus('Queen returned to center (not covered)');
@@ -343,11 +342,11 @@ function showWinner(player) {
 
 function getPointerPos(e) {
     const rect = aimCanvas.getBoundingClientRect();
-    const sx = S / rect.width;
-    const sy = S / rect.height;
+    const scaleX = BOARD_SIZE / rect.width;
+    const scaleY = BOARD_SIZE / rect.height;
     return {
-        x: (e.clientX - rect.left) * sx,
-        y: (e.clientY - rect.top) * sy,
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
     };
 }
 
@@ -359,7 +358,7 @@ function strikerDistance(pos) {
 function onPointerDown(e) {
     if (phase !== PHASE.AIM || !striker) return;
     const pos = getPointerPos(e);
-    if (strikerDistance(pos) > STRIKER_R * 3.7) return;
+    if (strikerDistance(pos) > STRIKER_RADIUS * 3.7) return;
     isDragging = true;
     interactMode = 'slide';
     dragStart = { x: striker.position.x, y: striker.position.y };
@@ -381,10 +380,10 @@ function onPointerMove(e) {
                 aimAnchor = { x: striker.position.x, y: striker.position.y };
             } else {
                 const baselineY = currentPlayer === 1 ? BASELINE_BOTTOM : BASELINE_TOP;
-                const nx = Math.max(CX - BASELINE_HALF, Math.min(CX + BASELINE_HALF, dragCurrent.x));
-                Body.setPosition(striker, { x: nx, y: baselineY });
+                const clampedStrikerX = Math.max(BOARD_CENTER_X - BASELINE_HALF, Math.min(BOARD_CENTER_X + BASELINE_HALF, dragCurrent.x));
+                Body.setPosition(striker, { x: clampedStrikerX, y: baselineY });
                 Body.setVelocity(striker, { x: 0, y: 0 });
-                dragStart = { x: nx, y: baselineY };
+                dragStart = { x: clampedStrikerX, y: baselineY };
             }
         }
     }
@@ -401,24 +400,24 @@ function onPointerUp() {
         return;
     }
 
-    const dx = dragCurrent.x - aimAnchor.x;
-    const dy = dragCurrent.y - aimAnchor.y;
-    const dist = Math.hypot(dx, dy);
+    const dragDeltaX = dragCurrent.x - aimAnchor.x;
+    const dragDeltaY = dragCurrent.y - aimAnchor.y;
+    const dragDistance = Math.hypot(dragDeltaX, dragDeltaY);
 
-    if (dist < 8) {
+    if (dragDistance < 8) {
         ui.powerBar.style.width = '0%';
         interactMode = 'slide';
         aimAnchor = null;
         return;
     }
 
-    const maxDist = INNER * 0.30;
-    const power = Math.min(dist / maxDist, 1);
-    const speed = power * S * 0.11;
-    const nx = dx / dist;
-    const ny = dy / dist;
+    const maxDragDistance = PLAY_AREA_SIZE * 0.30;
+    const shotPowerRatio = Math.min(dragDistance / maxDragDistance, 1);
+    const strikerSpeed = shotPowerRatio * BOARD_SIZE * 0.11;
+    const shotDirectionX = dragDeltaX / dragDistance;
+    const shotDirectionY = dragDeltaY / dragDistance;
 
-    Body.setVelocity(striker, { x: nx * speed, y: ny * speed });
+    Body.setVelocity(striker, { x: shotDirectionX * strikerSpeed, y: shotDirectionY * strikerSpeed });
     ui.powerBar.style.width = '0%';
     interactMode = 'slide';
     aimAnchor = null;
