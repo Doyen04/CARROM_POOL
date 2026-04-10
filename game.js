@@ -414,7 +414,7 @@ function onPointerUp() {
 
     const maxDist = INNER * 0.30;
     const power = Math.min(dist / maxDist, 1);
-    const speed = power * S * 0.17;
+    const speed = power * S * 0.11;
     const nx = dx / dist;
     const ny = dy / dist;
 
