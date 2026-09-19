@@ -21,6 +21,22 @@ A compact browser Carrom/Pool hybrid implemented in plain HTML, CSS, and JavaScr
 - `renderer.js` — draws the board and pieces to the canvas and handles animations.
 - (Optional) `assets/` — place images or sound files here if you add them.
 
+## Implementation details
+
+- Physics engine: Matter.js (rigid-body physics) is used for collisions, velocities, friction, and world simulation. The project includes Matter via CDN in `index.html` (version 0.19.0).
+- Rendering: HTML5 Canvas 2D API — custom drawing code in `renderer.js` (no high-level rendering library).
+- Input: Pointer Events (`pointerdown`, `pointermove`, `pointerup`) are used for unified mouse/touch handling.
+- Main loop: `requestAnimationFrame` + fixed-step physics updates (Engine.update with a fixed dt) for deterministic simulation.
+- Math: Basic 2D vector math (distance, normalization, scaling) implemented in `game.js` for aiming and shot power mapping.
+- UI: Minimal DOM for score, status, and controls; CSS for layout and styling.
+
+## Dependencies
+
+- Matter.js 0.19.0 — physics engine (CDN include in `index.html`): <https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js>
+- Google Fonts — `Playfair Display` and `DM Sans` for typography (CDN link in `index.html`).
+
+If you'd like, I can pin a local copy of Matter.js in the repo, add a `package.json` and install dependencies with npm, or replace Matter.js with a custom lightweight physics implementation — tell me which you prefer.
+
 ## How to run
 
 1. Quick (no server): open `index.html` in a modern browser (Chrome, Edge, Firefox).
